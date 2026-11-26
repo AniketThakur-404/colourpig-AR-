@@ -42,3 +42,6 @@ next-env.d.ts
 
 # large raw artboards
 public/*.pdf
+
+.vercel
+.env*.local
