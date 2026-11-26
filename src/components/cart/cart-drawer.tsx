@@ -1,0 +1,368 @@
+"use client";
+
+import React, { useRef } from "react";
+import Image from "@/components/ui/image";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
+import { SnoutIcon } from "@/components/brand/logo";
+import { useStore, CartItem } from "@/context/store-context";
+import { CheckoutComingSoon } from "@/components/cart/checkout-coming-soon";
+
+export function CartDrawer() {
+  const {
+    cart,
+    isCartOpen,
+    closeCart,
+    removeFromCart,
+    updateCartQuantity,
+    addToCart,
+    recommendations,
+    formatPrice,
+    cartNotice,
+    dismissCartNotice,
+  } = useStore();
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  // Plain-text bag summary sent with "checkout coming soon" enquiries
+  const orderSummary = [
+    ...cart.map((item) => `${item.quantity} × ${item.name}${item.variant ? ` (${item.variant})` : ""} — ${formatPrice(item.price * item.quantity)}`),
+    `Subtotal: ${formatPrice(subtotal)}`,
+  ].join("\n");
+
+  const getProductShadeLink = (item: CartItem) => {
+    if (item.shadeCode) {
+      const raw = item.shadeCode
+        .toLowerCase()
+        .replace("no.", "")
+        .replace("#", "")
+        .replace("/", "-")
+        .trim();
+      return `/product?shade=${raw}`;
+    }
+    return "/product";
+  };
+
+  return (
+    <AnimatePresence>
+      {isCartOpen && (
+        <div
+          data-lenis-prevent="true"
+          className="fixed inset-0 z-[100] flex justify-end"
+        >
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={closeCart}
+            className="fixed inset-0 bg-obsidian/75 backdrop-blur-sm"
+          />
+
+          {/* Side Drawer Panel */}
+          <motion.div
+            data-lenis-prevent="true"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 320 }}
+            className="relative w-full max-w-[440px] h-full bg-white text-obsidian shadow-2xl flex flex-col z-10 overflow-hidden"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
+            {/* Top Spectrum Ribbon Line (Brand Theme) */}
+            <div className="w-full h-[3px] bg-black flex-shrink-0" />
+
+            {/* 1. Sticky Header */}
+            <div className="px-6 py-4 sm:py-5 border-b border-ash/20 flex items-center justify-between bg-white flex-shrink-0 z-20">
+              <div className="flex items-center gap-2.5">
+                <SnoutIcon className="w-4 h-4 text-obsidian" color="#0D151C" />
+                <h2 className="text-base sm:text-lg font-headline font-bold tracking-wider text-obsidian uppercase">
+                  YOUR CART
+                </h2>
+                <span className="text-xs font-mono text-obsidian font-semibold px-2 py-0.5 rounded-full bg-platinum/50 border border-ash/30">
+                  {cart.reduce((a, b) => a + b.quantity, 0)}
+                </span>
+              </div>
+              <button
+                onClick={closeCart}
+                className="w-8 h-8 rounded-full border border-ash/30 flex items-center justify-center text-obsidian hover:text-obsidian hover:border-obsidian transition-colors"
+                aria-label="Close cart"
+              >
+                <X className="w-4 h-4 stroke-[2]" />
+              </button>
+            </div>
+
+            {/* Fully Scrollable Body with Native Smooth Scrolling */}
+            <div
+              ref={scrollContainerRef}
+              data-lenis-prevent="true"
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-drawer-scrollbar px-5 sm:px-6 py-4 space-y-6"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                touchAction: "pan-y",
+              }}
+              onWheel={(e) => e.stopPropagation()}
+            >
+              {/* Notice: sold-out item or checkout problem */}
+              {cartNotice && (
+                <div
+                  role="alert"
+                  className="flex items-start justify-between gap-3 p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-900"
+                >
+                  <p className="text-xs font-mono leading-relaxed">{cartNotice}</p>
+                  <button
+                    onClick={dismissCartNotice}
+                    className="shrink-0 text-rose-900/70 hover:text-rose-900 transition-colors"
+                    aria-label="Dismiss message"
+                  >
+                    <X className="w-3.5 h-3.5 stroke-[2]" />
+                  </button>
+                </div>
+              )}
+
+              {/* Cart Items List */}
+              {cart.length === 0 ? (
+                <div className="py-16 text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-platinum/40 flex items-center justify-center text-obsidian">
+                    <ShoppingBag className="w-8 h-8 stroke-[1.5]" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-headline font-bold text-obsidian text-sm tracking-wide uppercase">
+                      Your bag is empty
+                    </h3>
+                    <p className="text-xs text-obsidian max-w-[220px] mx-auto font-mono">
+                      Explore our root touch-up systems and refill pods.
+                    </p>
+                  </div>
+                  <Link
+                    href="/product"
+                    onClick={closeCart}
+                    className="mt-2 inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-obsidian text-white text-xs font-mono font-semibold tracking-wider uppercase hover:bg-black transition-colors"
+                  >
+                    Explore Shades
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3 pt-1">
+                  {cart.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-3.5 sm:p-4 rounded-xl border border-ash/25 bg-white shadow-2xs hover:border-ash/50 transition-all flex gap-3.5 sm:gap-4 items-start"
+                    >
+                      {/* Product Thumbnail */}
+                      <div className="relative w-20 h-24 sm:w-22 sm:h-26 rounded-lg overflow-hidden bg-platinum/30 border border-ash/20 flex-shrink-0">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          sizes="96px"
+                          className="object-cover object-center"
+                        />
+                      </div>
+
+                      {/* Item Details */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between min-h-[96px] sm:min-h-[104px]">
+                        <div>
+                          <div className="flex justify-between items-start gap-2">
+                            <Link
+                              href={getProductShadeLink(item)}
+                              onClick={closeCart}
+                              className="text-xs sm:text-[13px] font-montserrat font-bold text-obsidian leading-snug line-clamp-2 hover:underline"
+                            >
+                              {item.name}
+                            </Link>
+
+                            {/* Delete Item Button */}
+                            <button
+                              onClick={() => removeFromCart(item.id)}
+                              className="p-1 -mr-1 text-ash hover:text-red-500 transition-colors flex-shrink-0"
+                              aria-label={`Remove ${item.name}`}
+                            >
+                              <Trash2 className="w-4 h-4 stroke-[1.5]" />
+                            </button>
+                          </div>
+
+                          {/* Selected Color & Shade Badge */}
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            {item.shadeHex && (
+                              <span
+                                className="w-3 h-3 rounded-full border border-black/20 shrink-0 shadow-2xs inline-block"
+                                style={{ backgroundColor: item.shadeHex }}
+                                title={item.shadeCode || item.variant}
+                              />
+                            )}
+                            {item.shadeCode && (
+                              <span className="text-[10px] font-mono font-bold text-obsidian px-1.5 py-0.5 rounded bg-platinum/50 border border-ash/30 uppercase">
+                                {item.shadeCode}
+                              </span>
+                            )}
+                            <span className="text-[11px] text-obsidian font-mono truncate max-w-[180px]">
+                              {item.variant}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#C8CDD2]" />
+                            <span className="text-[10px] text-obsidian font-mono">
+                              In stock: {item.inStock}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Quantity Pill & Price Row */}
+                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-ash/15">
+                          {/* [- 1 +] Pill selector */}
+                          <div className="inline-flex items-center gap-2 border border-ash/30 rounded-full px-2 py-0.5 bg-platinum/20">
+                            <button
+                              onClick={() => updateCartQuantity(item.id, -1)}
+                              className="text-obsidian hover:text-obsidian transition-colors p-1"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="text-xs font-mono font-bold text-obsidian min-w-[14px] text-center">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateCartQuantity(item.id, 1)}
+                              className="text-obsidian hover:text-obsidian transition-colors p-1"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          {/* Item Price */}
+                          <div className="text-right">
+                            <div
+                              className="text-xs sm:text-sm !font-normal font-[400] text-obsidian font-mono tracking-tight"
+                              style={{ fontWeight: 400 }}
+                            >
+                              {formatPrice(item.price * item.quantity)}
+                            </div>
+                            {item.quantity > 1 && (
+                              <div className="text-[10px] text-obsidian font-mono">
+                                {formatPrice(item.price)} each
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 4. Cross-sell: "You may also like" */}
+              {recommendations.length > 0 && (
+              <div className="pt-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs sm:text-sm font-headline font-bold tracking-wider uppercase text-obsidian">
+                    You may also like
+                  </h3>
+                  <span className="text-[10px] font-mono text-obsidian">
+                    PRECISION ESSENTIALS
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {recommendations.slice(0, 3).map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-ash/20 bg-platinum/15 hover:bg-platinum/30 transition-colors"
+                    >
+                      {/* Rec Thumbnail */}
+                      <div className="relative w-14 h-18 sm:w-16 sm:h-20 rounded-lg overflow-hidden bg-white border border-ash/20 flex-shrink-0">
+                        <Image
+                          src={rec.image}
+                          alt={rec.name}
+                          fill
+                          sizes="64px"
+                          className="object-cover"
+                        />
+                      </div>
+
+                      {/* Rec Info */}
+                      <div className="flex-1 min-w-0 pr-1">
+                        <h4 className="text-xs font-montserrat font-semibold text-obsidian line-clamp-1">
+                          {rec.name}
+                        </h4>
+                        <p className="text-[10px] text-obsidian font-mono truncate mt-0.5">
+                          {rec.variant}
+                        </p>
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <span
+                            className="text-xs !font-normal font-[400] font-mono text-obsidian"
+                            style={{ fontWeight: 400 }}
+                          >
+                            {formatPrice(rec.price)}
+                          </span>
+                          {rec.originalPrice && (
+                            <span className="text-[10px] font-mono text-ash line-through">
+                              {formatPrice(rec.originalPrice)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Add Button in Brand Theme */}
+                      <button
+                        onClick={() =>
+                          addToCart({
+                            id: rec.id,
+                            name: rec.name,
+                            variant: rec.variant,
+                            price: rec.price,
+                            originalPrice: rec.originalPrice,
+                            image: rec.image,
+                            inStock: rec.inStock,
+                            shadeCode: rec.shadeCode,
+                            shadeHex: rec.shadeHex,
+                          })
+                        }
+                        className="px-3 py-1.5 rounded-lg bg-obsidian hover:bg-black text-white text-[11px] font-mono font-semibold tracking-wider uppercase transition-all flex-shrink-0 shadow-2xs"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              )}
+
+              {/* Bottom spacing buffer for seamless scroll clearance */}
+              <div className="h-4" />
+            </div>
+
+            {/* 5. Sticky Bottom Summary & Checkout in ColourPig Brand Theme */}
+            {cart.length > 0 && (
+              <div className="p-5 sm:p-6 border-t border-ash/25 bg-white space-y-3.5 flex-shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] z-20">
+                {/* Subtotal row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono uppercase tracking-widest font-bold text-obsidian">
+                    SUBTOTAL
+                  </span>
+                  <span
+                    className="text-lg !font-normal font-[400] font-mono text-obsidian tracking-tight"
+                    style={{ fontWeight: 400 }}
+                  >
+                    {formatPrice(subtotal)}
+                  </span>
+                </div>
+
+                {/* Online checkout isn't open yet: contact email + enquiry form instead of Checkout.
+                    To reopen Shopify checkout, swap this back for a button calling useStore().checkout. */}
+                <div className="border-t border-ash/20 pt-3.5">
+                  <CheckoutComingSoon orderSummary={orderSummary} onContinue={closeCart} />
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}

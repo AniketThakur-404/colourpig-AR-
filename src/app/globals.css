@@ -1,0 +1,334 @@
+/* ==========================================================================
+   COLOURPIG BRAND TYPOGRAPHY (Brand Guide pp. 24–26)
+   - Primary   : PP Agrandir       → titles, headlines (h1, h2)
+   - Secondary : PP Neue Montreal  → body copy, product names, h3–h6, UI
+   - Helping   : Intel One Mono    → labels, tags, codes, metadata (font-mono)
+
+   PP Agrandir / PP Neue Montreal are licensed Pangram Pangram fonts.
+   Place the font files here (.woff2 preferred, .otf also accepted):
+     public/fonts/pp-agrandir/PPAgrandir-Regular.woff2        (400)
+     public/fonts/pp-agrandir/PPAgrandir-Bold.woff2           (700)
+     public/fonts/pp-neue-montreal/PPNeueMontreal-Regular.woff2 (400)
+     public/fonts/pp-neue-montreal/PPNeueMontreal-Italic.woff2  (400 italic)
+     public/fonts/pp-neue-montreal/PPNeueMontreal-Medium.woff2  (500)
+     public/fonts/pp-neue-montreal/PPNeueMontreal-Bold.woff2    (700)
+   Intel One Mono is open source (SIL OFL) and self-hosted below from
+   public/fonts/intel-one-mono/ (latin subset, 400/500/700).
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Intel One Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/intel-one-mono/IntelOneMono-Regular.woff2') format('woff2'),
+       url('/fonts/intel-one-mono/IntelOneMono-VariableFont_wght.ttf') format('truetype'),
+       url('/new%20fonts/IntelOneMono-VariableFont_wght.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Intel One Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/intel-one-mono/IntelOneMono-Medium.woff2') format('woff2'),
+       url('/fonts/intel-one-mono/IntelOneMono-VariableFont_wght.ttf') format('truetype'),
+       url('/new%20fonts/IntelOneMono-VariableFont_wght.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Intel One Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/intel-one-mono/IntelOneMono-Bold.woff2') format('woff2'),
+       url('/fonts/intel-one-mono/IntelOneMono-VariableFont_wght.ttf') format('truetype'),
+       url('/new%20fonts/IntelOneMono-VariableFont_wght.ttf') format('truetype');
+}
+
+/* PP Agrandir Bold (Updated Headline font: Agrandir Bold / TextBold replacing Grand Heavy) */
+@font-face {
+  font-family: 'PP Agrandir';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Agrandir Text Bold'), local('Agrandir-TextBold'), local('Agrandir Bold'), local('PP Agrandir Bold'),
+       url('/fonts/pp-agrandir/Agrandir-TextBold.otf') format('opentype'),
+       url('/new%20fonts/Agrandir-TextBold.otf') format('opentype');
+}
+@font-face {
+  font-family: 'PP Agrandir';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Agrandir Text Bold'), local('Agrandir-TextBold'), local('Agrandir Bold'), local('PP Agrandir Bold'),
+       url('/fonts/pp-agrandir/Agrandir-TextBold.otf') format('opentype'),
+       url('/new%20fonts/Agrandir-TextBold.otf') format('opentype');
+}
+@font-face {
+  font-family: 'PP Agrandir';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Agrandir Text Bold'), local('Agrandir-TextBold'), local('Agrandir Bold'), local('PP Agrandir Bold'),
+       url('/fonts/pp-agrandir/Agrandir-TextBold.otf') format('opentype'),
+       url('/new%20fonts/Agrandir-TextBold.otf') format('opentype');
+}
+@font-face {
+  font-family: 'PP Agrandir';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: local('Agrandir Text Bold'), local('Agrandir-TextBold'), local('Agrandir Bold'), local('PP Agrandir Bold'),
+       url('/fonts/pp-agrandir/Agrandir-TextBold.otf') format('opentype'),
+       url('/new%20fonts/Agrandir-TextBold.otf') format('opentype');
+}
+@font-face {
+  font-family: 'PP Agrandir';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: local('Agrandir Text Bold'), local('Agrandir-TextBold'), local('Agrandir Bold'), local('PP Agrandir Bold'),
+       url('/fonts/pp-agrandir/Agrandir-TextBold.otf') format('opentype'),
+       url('/new%20fonts/Agrandir-TextBold.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'Agrandir';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: local('Agrandir Text Bold'), local('Agrandir-TextBold'), local('Agrandir Bold'), local('PP Agrandir Bold'),
+       url('/fonts/pp-agrandir/Agrandir-TextBold.otf') format('opentype'),
+       url('/new%20fonts/Agrandir-TextBold.otf') format('opentype');
+}
+
+/* PP Neue Montreal (Secondary brand body font) */
+@font-face {
+  font-family: 'PP Neue Montreal';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('PP Neue Montreal Medium'), local('PPNeueMontreal-Medium'), local('PP Neue Montreal Regular'),
+       url('/fonts/pp-neue-montreal/PPNeueMontreal-Medium.otf') format('opentype'),
+       url('/new%20fonts/PPNeueMontreal-Medium.otf') format('opentype');
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('PP Neue Montreal Italic'), local('PPNeueMontreal-Italic'),
+       url('/fonts/pp-neue-montreal/PPNeueMontreal-Medium.otf') format('opentype'),
+       url('/new%20fonts/PPNeueMontreal-Medium.otf') format('opentype');
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('PP Neue Montreal Medium'), local('PPNeueMontreal-Medium'),
+       url('/fonts/pp-neue-montreal/PPNeueMontreal-Medium.otf') format('opentype'),
+       url('/new%20fonts/PPNeueMontreal-Medium.otf') format('opentype');
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('PP Neue Montreal Medium'), local('PPNeueMontreal-Medium'),
+       url('/fonts/pp-neue-montreal/PPNeueMontreal-Medium.otf') format('opentype'),
+       url('/new%20fonts/PPNeueMontreal-Medium.otf') format('opentype');
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('PP Neue Montreal Medium'), local('PPNeueMontreal-Medium'), local('PP Neue Montreal Bold'),
+       url('/fonts/pp-neue-montreal/PPNeueMontreal-Medium.otf') format('opentype'),
+       url('/new%20fonts/PPNeueMontreal-Medium.otf') format('opentype');
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-obsidian: #0D151C;
+    --color-midnight: #13212E;
+    --color-toc: #142431;      /* Image 2 Table of Contents Steel-Petrol Blue */
+    --color-steel: #253744;
+    --color-graphite: #495B69;
+    --color-ash: #949FA3;
+    --color-platinum: #CED1D0; /* Image 3 Light Platinum Grey */
+
+    /* Brand font stacks */
+    --font-primary: 'PP Agrandir', 'Agrandir', 'Helvetica Neue', Arial, sans-serif;
+    --font-secondary: 'PP Neue Montreal', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    --font-helping: 'Intel One Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  body {
+    background-color: var(--color-obsidian);
+    color: var(--color-platinum);
+    font-family: var(--font-secondary);
+    overflow-x: hidden;
+  }
+
+  /* Titles ONLY: Section titles, page headers, editorial headlines — PP Agrandir */
+  h1, h2, .font-title, .font-cormorant, .cormorant-garamond, .font-agrandir {
+    font-family: var(--font-primary);
+    letter-spacing: normal;
+  }
+
+  /* All other elements: Product names, body, descriptions, h3-h6, buttons — PP Neue Montreal */
+  h3, h4, h5, h6, .font-body, .font-sans, .font-montserrat, .montserrat, .product-name, .font-neue-montreal {
+    font-family: var(--font-secondary);
+  }
+
+  /* Labels, tags, codes, metadata — Intel One Mono */
+  .font-mono, .font-intel-mono {
+    font-family: var(--font-helping);
+  }
+}
+
+.product-name, .product-title {
+  font-family: var(--font-secondary) !important;
+}
+
+/* Legacy weight helpers (class names kept so existing markup keeps working) */
+.cormorant-garamond-700 {
+  font-family: var(--font-primary);
+  font-weight: 700;
+}
+
+.cormorant-garamond-600 {
+  font-family: var(--font-primary);
+  font-weight: 600;
+}
+
+.montserrat-500 {
+  font-family: var(--font-secondary);
+  font-weight: 500;
+}
+
+.montserrat-600 {
+  font-family: var(--font-secondary);
+  font-weight: 600;
+}
+
+/* Image 1: Iconic Hero Luminous Spotlight Background (Page 1 & 5) */
+.bg-hero-spotlight {
+  background: 
+    radial-gradient(ellipse 75% 65% at 35% 85%, rgba(206, 209, 208, 0.42) 0%, rgba(73, 91, 105, 0.28) 42%, transparent 75%),
+    linear-gradient(135deg, #13212E 0%, #0D151C 65%, #080E13 100%);
+}
+
+/* Image 2: Deep Steel Petrol Navy Background for Banners & Collection Cards (Page 4 TOC) */
+.bg-banner-toc {
+  background-color: #142431;
+}
+
+/* Image 3: Light Platinum Ash Grey for Product Cards (Page 2) */
+.bg-product-card-light {
+  background-color: #CED1D0;
+  color: #0D151C;
+}
+
+/* Subtle micro-snout brand pattern (Pages 28-29) */
+.brand-snout-pattern {
+  background-image: radial-gradient(circle at center, rgba(148, 159, 163, 0.12) 1.5px, transparent 1.5px),
+                    radial-gradient(circle at 6px 0px, rgba(148, 159, 163, 0.12) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/* Lenis smooth scrolling rules */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Custom branded drawer scrollbar */
+.custom-drawer-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #CED1D0 transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.custom-drawer-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-drawer-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-drawer-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #CED1D0;
+  border-radius: 9999px;
+}
+
+.custom-drawer-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #949FA3;
+}
+
+@keyframes hologramScan {
+  0% {
+    top: 4%;
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    top: 94%;
+    opacity: 0;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+
+/* Respect the OS "reduce motion" setting: collapse every CSS animation and transition */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

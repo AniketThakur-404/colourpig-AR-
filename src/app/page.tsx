@@ -1,0 +1,108 @@
+"use client";
+
+import React from "react";
+import { Navbar } from "@/components/navigation/navbar";
+import { HeroSection, ShadeItem } from "@/components/sections/hero-section";
+import { CartDrawer } from "@/components/cart/cart-drawer";
+import { WishlistDrawer } from "@/components/wishlist/wishlist-drawer";
+import { HamburgerMenu } from "@/components/navigation/hamburger-menu";
+import { StoreProvider, useStore } from "@/context/store-context";
+
+// UI Inspiration Sections
+import { ColorfulMarquee } from "@/components/home/colorful-marquee";
+import { NewDispatches } from "@/components/home/new-dispatches";
+import { Bestsellers } from "@/components/home/bestsellers";
+import { ShadeFinder } from "@/components/home/shade-finder";
+import { PressTicker } from "@/components/home/press-ticker";
+import { InShowerRitual } from "@/components/home/in-shower-ritual";
+import { BehindTheScience } from "@/components/home/behind-the-science";
+import { CustomerReviews } from "@/components/home/customer-reviews";
+import { EcommFooter } from "@/components/home/ecomm-footer";
+
+import { STARTER_KIT_PRICE } from "@/data/pricing";
+import { findShade } from "@/data/catalog";
+import { useCatalog } from "@/context/catalog-context";
+
+function HomeContent() {
+  const { addToCart } = useStore();
+  const { shades } = useCatalog();
+
+  const handleAddToCart = (shade: ShadeItem) => {
+    const foundShade = findShade(shades, shade.code);
+    const imagePath = foundShade?.cardImage || "/Medium Brown/Medium Brown.00000.png";
+
+    const shadeId = foundShade?.id || `shade-${shade.code.toLowerCase().replace(/^(no\.?|#)/, "").replace("/", "-")}`;
+
+    addToCart({
+      id: `${shadeId}-starter-system`,
+      name: `Colourpig Starter System | ${shade.name}`,
+      variant: `${shade.undertone} • Complete Starter System`,
+      price: foundShade?.price ?? STARTER_KIT_PRICE,
+      image: imagePath,
+      shadeCode: shade.code,
+      shadeHex: shade.hex,
+    });
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-white text-obsidian flex flex-col overflow-x-clip selection:bg-steel selection:text-white">
+      {/* Side-Page Drawers */}
+      <CartDrawer />
+      <WishlistDrawer />
+      <HamburgerMenu />
+
+      {/* 1. E-Commerce Navbar */}
+      <Navbar />
+
+      {/* 2. Video Hero Section */}
+      <HeroSection onAddToCart={handleAddToCart} />
+
+      {/* Brand Colorful Infinite Marquee */}
+      <ColorfulMarquee />
+
+      {/* 3. EXPLORE YOUR SHADE Product Grid */}
+      <div className="w-full bg-white text-obsidian border-b border-ash/30">
+        <NewDispatches onAddToCart={handleAddToCart} />
+      </div>
+
+      {/* 4. BEFORE & AFTER RESULTS */}
+      <div className="w-full bg-white text-obsidian border-b border-ash/30">
+        <ShadeFinder onAddToCart={handleAddToCart} />
+      </div>
+
+      {/* 5. THE SYSTEM (BEHIND THE SCIENCE - VIDEO SECTION) */}
+      <div className="w-full bg-midnight text-platinum border-b border-white/10">
+        <BehindTheScience />
+      </div>
+
+      {/* 6. BESTSELLERS 4-Card Grid */}
+      <div className="w-full bg-white text-obsidian">
+        <Bestsellers onAddToCart={handleAddToCart} />
+      </div>
+
+      {/* 7. Press & Editorial Bar (Midnight Accent Strip) */}
+      <PressTicker />
+
+      {/* 8. WHAT OUR CLIENTS SAY (TESTIMONIALS) */}
+      <div className="w-full bg-white text-obsidian border-b border-ash/30">
+        <CustomerReviews />
+      </div>
+
+      {/* 9. THE RITUAL (IN-SHOWER RITUAL) - AFTER TESTIMONIALS WITH MIDNIGHT BG */}
+      <div className="w-full bg-midnight text-platinum">
+        <InShowerRitual />
+      </div>
+
+      {/* 10. Luxury E-Commerce Footer */}
+      <EcommFooter />
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <StoreProvider>
+      <HomeContent />
+    </StoreProvider>
+  );
+}
