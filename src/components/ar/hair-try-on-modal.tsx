@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -108,7 +108,6 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
 
   const [shadeId, setShadeId] = useState(initialShadeId);
   const shade = findShade(shades, shadeId) ?? shades[0];
-  const isClear = getHairShadeProfile(shade).kind === "gloss";
   const kit = shade.kits.find((k) => k.id === "starter-system") ?? shade.kits[0];
 
   const [view, setView] = useState<View>("intro");
@@ -198,6 +197,13 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
   // Fine-tuning sliders for the dye blend, shown only when the page is opened with ?tune
   const [tuneMode] = useState(() => new URLSearchParams(window.location.search).has("tune"));
   const [tuning, setTuning] = useState<TryOnTuning>(DEFAULT_TUNING);
+  // With ?tune, how the live camera keeps up (to check on slower phones)
+  const [stats, setStats] = useState<HairTryOnEngine["stats"] | null>(null);
+  useEffect(() => {
+    if (!tuneMode) return;
+    const timer = window.setInterval(() => setStats(engineRef.current?.stats ?? null), 1000);
+    return () => window.clearInterval(timer);
+  }, [tuneMode]);
   useEffect(() => {
     engineRef.current?.setTuning(tuning);
   }, [tuning, attempt]);
@@ -259,9 +265,34 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
     }
   };
 
+  // Leaving the tab or app (or locking the phone) stops the camera and its light, so nothing
+  // runs in the background; coming back starts it again with the same lens
+  const pausedCamera = useRef(false);
+  const onVisibility = useEffectEvent(() => {
+    if (document.hidden) {
+      if (view !== "camera") return;
+      pausedCamera.current = true;
+      engineRef.current?.stopSource();
+    } else if (pausedCamera.current) {
+      // Wait a moment first: on Android the photo picker hides the page too, and coming back
+      // from it with a photo must show that photo, not restart the camera over it
+      window.setTimeout(() => {
+        if (!pausedCamera.current) return;
+        pausedCamera.current = false;
+        void startCamera();
+      }, 400);
+    }
+  });
+  useEffect(() => {
+    const handle = () => onVisibility();
+    document.addEventListener("visibilitychange", handle);
+    return () => document.removeEventListener("visibilitychange", handle);
+  }, []);
+
   const openPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
+    if (file) pausedCamera.current = false;
     const engine = engineRef.current;
     if (!file || !engine) return;
     setView("starting");
@@ -446,8 +477,8 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
       />
 
       {/* A tall, phone-shaped frame: the picture on top, a sheet of shades underneath */}
-      <div className="relative z-10 flex flex-col w-full sm:max-w-[420px] h-[100dvh] bg-white text-obsidian overflow-hidden shadow-2xl">
-        <div inert={!!asking} className="flex flex-col flex-1 min-h-0">
+      <div className="relative z-10 flex flex-col w-full sm:max-w-[420px] h-[100dvh] bg-obsidian text-obsidian overflow-hidden shadow-2xl">
+        <div inert={!!asking} className="relative flex flex-col flex-1 min-h-0">
           {/* ------------------------------------------------ Stage: the preview */}
           <div ref={stageRef} className="relative flex-1 min-h-0 bg-obsidian overflow-hidden select-none">
             <video ref={videoRef} playsInline muted aria-hidden="true" className="absolute w-px h-px opacity-0 pointer-events-none" />
@@ -466,7 +497,7 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
             <input ref={fileRef} type="file" accept="image/*" onChange={openPhoto} className="hidden" tabIndex={-1} />
 
             {view === "intro" && (
-              <div className="absolute inset-0 flex flex-col items-center justify-end text-center text-white px-6 pt-16 pb-8 overflow-hidden">
+              <div className="absolute inset-0 flex flex-col items-center justify-end text-center text-white px-6 pt-16 pb-[164px] overflow-hidden">
                 <Image
                   src={shade.modelImage}
                   alt=""
@@ -474,16 +505,10 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                   sizes="(max-width: 640px) 100vw, 500px"
                   className="object-cover object-top opacity-50"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/60 to-obsidian/10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-obsidian/60 via-obsidian/40 to-obsidian/10" />
 
                 <div className="relative max-w-sm flex flex-col items-center">
-                  <p className="text-[13px] leading-snug text-platinum">
-                    {isClear
-                      ? "Clear adds shine without changing your colour. Watch it live on camera, or try it on a photo."
-                      : "Watch the colour move with you live on camera, or try it on a photo."}
-                  </p>
-
-                  <div className="mt-5 w-full flex flex-col gap-2">
+                  <div className="w-full flex flex-col gap-2">
                     <button
                       type="button"
                       onClick={() => begin("camera")}
@@ -566,12 +591,7 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                       </button>
                     )}
                   </div>
-                ) : (
-                  <span className="h-8 pl-1.5 pr-3 rounded-full bg-white/95 text-obsidian shadow-md flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-[0.16em]">
-                    <SnoutIcon className="w-4 h-4" />
-                    Virtual try-on
-                  </span>
-                )}
+                ) : null}
               </div>
               <div className="flex items-center gap-2 pointer-events-auto">
                 {view === "camera" && (
@@ -650,10 +670,10 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
 
                 {comparing && (
                   <>
-                    <span className="absolute bottom-10 left-3 z-10 px-2.5 py-1 rounded-full bg-black/55 text-white text-[10px] font-mono font-bold uppercase tracking-wider pointer-events-none">
+                    <span className="absolute bottom-[156px] left-3 z-10 px-2.5 py-1 rounded-full bg-black/55 text-white text-[10px] font-mono font-bold uppercase tracking-wider pointer-events-none">
                       Before
                     </span>
-                    <span className="absolute bottom-10 right-3 z-10 px-2.5 py-1 rounded-full bg-white text-obsidian text-[10px] font-mono font-bold uppercase tracking-wider pointer-events-none">
+                    <span className="absolute bottom-[156px] right-3 z-10 px-2.5 py-1 rounded-full bg-white text-obsidian text-[10px] font-mono font-bold uppercase tracking-wider pointer-events-none">
                       After
                     </span>
                     <div
@@ -716,8 +736,8 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
             )}
           </div>
 
-          {/* ------------------------------------------------ Sheet: shades, compare and bag */}
-          <div className="relative z-10 shrink-0 bg-white flex flex-col">
+          {/* ------------------------------------------------ Sheet: shades and compare, floating over the picture */}
+          <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_0_8px_rgba(0,0,0,0.45)]">
             <h2 id="try-on-title" className="sr-only">
               Virtual try-on: {shade.name}
             </h2>
@@ -746,7 +766,7 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                       >
                         <span
                           className={`relative block w-11 h-11 rounded-full transition-all ${
-                            active ? "ring-2 ring-obsidian ring-offset-2" : "ring-1 ring-black/10 group-hover:-translate-y-0.5"
+                            active ? "ring-2 ring-white ring-offset-2 ring-offset-transparent" : "ring-1 ring-white/30 group-hover:-translate-y-0.5"
                           }`}
                           style={{ backgroundColor: option.hex }}
                         >
@@ -758,7 +778,7 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                         </span>
                         <span
                           className={`w-full line-clamp-2 text-center font-mono text-[9px] leading-tight ${
-                            active ? "font-bold text-obsidian" : "font-medium text-steel"
+                            active ? "font-bold text-white" : "font-medium text-white/80"
                           }`}
                         >
                           {option.code} {shortName(option.name)}
@@ -767,20 +787,20 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                     );
                   })}
                 </div>
-                {/* Faded edges with an arrow, only where more shades are hidden */}
+                {/* An arrow on each edge, only where more shades are hidden */}
                 {(["left", "right"] as const).map((side) => (
                   <div
                     key={side}
-                    className={`absolute inset-y-0 ${side === "left" ? "left-0 bg-gradient-to-r" : "right-0 bg-gradient-to-l"} w-12 from-white via-white/80 to-white/0 flex items-center ${
+                    className={`absolute inset-y-0 ${side === "left" ? "left-0" : "right-0"} w-10 flex items-center pointer-events-none ${
                       side === "left" ? "justify-start pl-1" : "justify-end pr-1"
-                    } transition-opacity duration-200 ${more[side] ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+                    } transition-opacity duration-200 ${more[side] ? "opacity-100" : "opacity-0"}`}
                   >
                     <button
                       type="button"
                       tabIndex={-1}
                       aria-hidden="true"
                       onClick={() => slideShades(side === "left" ? -1 : 1)}
-                      className="-mt-5 w-7 h-7 rounded-full bg-white/90 text-obsidian shadow-md flex items-center justify-center cursor-pointer hover:bg-white"
+                      className={`-mt-5 w-7 h-7 rounded-full bg-white/90 text-obsidian shadow-md flex items-center justify-center cursor-pointer hover:bg-white ${more[side] ? "pointer-events-auto" : ""}`}
                     >
                       {side === "left" ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
@@ -795,7 +815,7 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                   aria-pressed={comparing}
                   disabled={!live}
                   className={`w-[88px] h-[74px] rounded-xl flex flex-col items-center justify-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                    comparing ? "bg-obsidian text-white" : "bg-platinum/40 hover:bg-platinum/70 text-obsidian"
+                    comparing ? "bg-white text-obsidian [text-shadow:none]" : "bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white"
                   }`}
                 >
                   <SquareSplitHorizontal className="w-6 h-6" strokeWidth={1.4} />
@@ -805,9 +825,16 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
             )}
 
             {tuneMode && (
-              <div className="mx-4 mt-2 p-3 max-h-48 overflow-y-auto rounded-xl border border-black/10 bg-black/[0.02] space-y-2.5">
+              <div className="mx-4 mt-2 p-3 max-h-48 overflow-y-auto rounded-xl bg-white/95 [text-shadow:none] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-mono font-bold uppercase tracking-wider">Tuning</p>
+                  <p className="text-[11px] font-mono font-bold uppercase tracking-wider">
+                    Tuning
+                    {view === "camera" && stats && (
+                      <span className="ml-2 font-normal normal-case tracking-normal text-graphite">
+                        {stats.fps} fps · model {stats.modelMs} ms (start {stats.startMs}, read {stats.readMs}, rest of frame {stats.baseMs}) · {stats.size} · {stats.delegate}
+                      </span>
+                    )}
+                  </p>
                   <div className="flex gap-3 text-[10px] font-mono underline">
                     <button type="button" className="cursor-pointer" onClick={() => setTuning(DEFAULT_TUNING)}>
                       Reset
@@ -842,11 +869,11 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
             )}
 
             {/* Tabs */}
-            <div className="bg-[#F3F4F4] border-t border-platinum px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <div className="px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               <div role="tablist" aria-label="Try-on tools" className="relative mx-auto max-w-[220px] grid grid-cols-2">
                 <span
                   aria-hidden="true"
-                  className={`absolute inset-y-0 left-0 w-1/2 rounded-md bg-obsidian transition-transform duration-300 ${
+                  className={`absolute inset-y-0 left-0 w-1/2 rounded-md bg-white transition-transform duration-300 ${
                     tab === "compare" ? "translate-x-full" : ""
                   }`}
                 />
@@ -858,8 +885,8 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                     aria-selected={tab === name}
                     disabled={name === "compare" && !live}
                     onClick={() => openTab(name)}
-                    className={`relative h-8 rounded-md font-mono text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:cursor-not-allowed disabled:text-ash ${
-                      tab === name ? "text-white" : "text-obsidian"
+                    className={`relative h-8 rounded-md font-mono text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:cursor-not-allowed disabled:text-white/40 ${
+                      tab === name ? "text-obsidian [text-shadow:none]" : "text-white"
                     }`}
                   >
                     {name}

@@ -18,6 +18,7 @@ const HairTryOnModal = dynamic(() => import("./hair-try-on-modal").then((mod) =>
 // Shades left out of the try-on. All shades are shown for now while they're being tested;
 // uncomment an id to hide that shade from the try-on again.
 const HIDDEN_TRY_ON_SHADES: string[] = [
+  "shade-0-0", // No.0/0 Clear (remove this line to show it again)
   // "shade-7", // No.7 Medium Blonde
   // "shade-8", // No.8 Light Blonde
   // "shade-9", // No.9 Very Light Blonde

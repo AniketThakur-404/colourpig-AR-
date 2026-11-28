@@ -60,6 +60,22 @@ const MASK_PIXELS = MASK * MASK;
  * The wait lets each picture's mask be checked against the next frame before it is drawn.
  */
 const CAMERA_DELAY = 1;
+
+/*
+ * Keeping the live camera smooth on slower phones (many Android phones).
+ *  - The model runs on the GPU. Reading its mask back straight away makes the page wait
+ *    until the GPU has finished, which can take longer than a frame and drag the whole video
+ *    down to the model's speed. So on camera frames the model is started on one frame and
+ *    its mask read at the start of the next, when it has had a frame's time to finish. The
+ *    camera is shown CAMERA_DELAY (one) frame late, so that mask is for the very picture on
+ *    screen.
+ *  - The model still runs on every frame. Running it less often was tried: the mask then
+ *    lags a moving head and the colour drops off the moving hair.
+ */
+/** Frames closer together than this are skipped (60 fps cameras: handle about 30 a second) */
+const MIN_FRAME_MS = 26;
+/** The first model runs are slow while the GPU warms up; they're left out of the timings */
+const WARM_UP_RUNS = 4;
 /** Mask level (0–255) counted as hair when looking for stray patches */
 const BLOB_LEVEL = 77;
 
@@ -445,6 +461,27 @@ export class HairTryOnEngine {
   private hasFace = false;
   private split = -1;
   private frame = 0;
+  // Self-pacing (see MIN_FRAME_MS)
+  /** Smoothed time per frame for drawing and everything but the model, in ms */
+  private baseCost = 0;
+  /** Smoothed time per model run (starting it plus reading its mask), in ms */
+  private modelCost = 0;
+  /** A model run started on a camera frame, read on the next one */
+  private pending: {
+    result: ImageSegmenterResult;
+    source: Source;
+    steady: boolean;
+    measure: boolean;
+    startMs: number;
+  } | null = null;
+  private modelRuns = 0;
+  private modelsRead = 0;
+  private lastFrameAt = 0;
+  private fpsWindow = { start: 0, frames: 0 };
+  private shownFps = 0;
+  private startMs = 0;
+  private readMs = 0;
+  private delegate = "";
   private frameStale = true;
   private matteStale = true;
   private drawQueued = false;
@@ -507,14 +544,17 @@ export class HairTryOnEngine {
     let segmenter: ImageSegmenter;
     try {
       segmenter = await create("GPU");
+      this.delegate = "GPU";
       // Some phone GPUs run the model without complaint but hand back blank or garbage masks
       if (!this.answersSensibly(segmenter)) {
         segmenter.close();
         segmenter = await create("CPU");
+        this.delegate = "CPU (GPU answered wrongly)";
       }
     } catch {
       // Phones and browsers without usable GPU inference fall back to the processor
       segmenter = await create("CPU");
+      this.delegate = "CPU (GPU failed to start)";
     }
 
     if (this.destroyed) {
@@ -782,7 +822,8 @@ export class HairTryOnEngine {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+        // 30 frames a second is all the try-on uses; some phones would otherwise send 60
+        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
       });
     } catch (error) {
       const name = error instanceof DOMException ? error.name : "";
@@ -868,6 +909,7 @@ export class HairTryOnEngine {
 
   /** Stops the camera (and its indicator light). */
   stopSource() {
+    this.dropPending();
     if (this.frameCallback) {
       if (this.usesVideoFrames) this.video.cancelVideoFrameCallback(this.frameCallback);
       else cancelAnimationFrame(this.frameCallback);
@@ -954,6 +996,7 @@ export class HairTryOnEngine {
   };
 
   private setSource(source: Source) {
+    this.dropPending();
     this.source = source;
     this.roi = this.fullRoi(source);
     this.hasMatte = false;
@@ -968,6 +1011,8 @@ export class HairTryOnEngine {
     this.zoneBytes.fill(255);
     this.zoneStale = true;
     this.lostFrames = 0;
+    this.lastFrameAt = 0;
+    this.fpsWindow = { start: 0, frames: 0 };
     this.strength = 0;
     this.framesLoaded = 0;
     this.steadyFresh = true;
@@ -993,6 +1038,13 @@ export class HairTryOnEngine {
     const source = this.source;
     if (this.destroyed || !source || source.kind !== "camera") return;
 
+    const started = performance.now();
+    if (started - this.lastFrameAt < MIN_FRAME_MS) {
+      this.scheduleFrame();
+      return;
+    }
+    this.lastFrameAt = started;
+
     const video = this.video;
     if (video.readyState >= 2 && video.videoWidth > 0) {
       // Rotating a phone swaps the camera's width and height
@@ -1004,8 +1056,17 @@ export class HairTryOnEngine {
         // camera frame, and copying afterwards would show a newer picture than the mask was
         // made from, leaving colour trailing behind the hair whenever the head moves.
         this.uploadFrame(this.source ?? source);
-        this.analyse(true, this.frame % 2 === 0);
+        // The mask of the run started last frame, which is the picture now going on screen
+        let modelMs = this.collectPending();
+        // The face mask and measurements come every other run (see readMasks)
+        const t = performance.now();
+        this.analyse(true, this.modelRuns % 2 === 0, true);
+        modelMs += performance.now() - t;
+        this.modelRuns++;
         this.draw(true);
+        const base = performance.now() - started - modelMs;
+        this.baseCost = this.baseCost ? this.baseCost * 0.85 + base * 0.15 : base;
+        this.countFrame(started);
       } catch (error) {
         this.onError?.(
           error instanceof TryOnError
@@ -1018,6 +1079,61 @@ export class HairTryOnEngine {
     }
     this.scheduleFrame();
   };
+
+  /** Reads the mask of the model run started on the previous frame; returns the ms it took. */
+  private collectPending(): number {
+    const pending = this.pending;
+    if (!pending) return 0;
+    this.pending = null;
+    const t = performance.now();
+    try {
+      this.readMasks(pending.result, pending.source, pending.steady, pending.measure);
+    } finally {
+      pending.result.close();
+    }
+    const spent = performance.now() - t;
+    if (++this.modelsRead > WARM_UP_RUNS) {
+      const run = pending.startMs + spent;
+      const ease = (old: number, now: number) => (old ? old * 0.85 + now * 0.15 : now);
+      this.startMs = ease(this.startMs, pending.startMs);
+      this.readMs = ease(this.readMs, spent);
+      this.modelCost = ease(this.modelCost, run);
+    }
+    return spent;
+  }
+
+  /** A model run whose picture is gone (new source, camera stopped): its mask is no use. */
+  private dropPending() {
+    this.pending?.result.close();
+    this.pending = null;
+  }
+
+  private countFrame(now: number) {
+    const span = this.fpsWindow;
+    if (!span.start) span.start = now;
+    span.frames++;
+    if (now - span.start >= 1000) {
+      this.shownFps = Math.round((span.frames * 1000) / (now - span.start));
+      this.fpsWindow = { start: now, frames: 0 };
+    }
+  }
+
+  /**
+   * How the live camera is keeping up (shown with ?tune): frames shown per second; how long
+   * a model run holds up the page, in ms, split into starting it and reading its mask; the
+   * rest of each frame's time; the camera size; and whether the model runs on the GPU.
+   */
+  get stats() {
+    return {
+      fps: this.shownFps,
+      modelMs: Math.round(this.modelCost),
+      startMs: Math.round(this.startMs),
+      readMs: Math.round(this.readMs),
+      baseMs: Math.round(this.baseCost),
+      size: `${this.source?.width ?? 0}x${this.source?.height ?? 0}`,
+      delegate: this.delegate,
+    };
+  }
 
   /** Redraws a still photo (camera frames redraw themselves). */
   private requestDraw() {
@@ -1040,8 +1156,11 @@ export class HairTryOnEngine {
     return { x: (source.width - size) / 2, y: (source.height - size) / 2, size };
   }
 
-  /** Runs the model on the head crop, then updates the mask, the crop and (optionally) the measurements. */
-  private analyse(steady: boolean, measure: boolean) {
+  /**
+   * Runs the model on the head crop, then updates the mask, the crop and (optionally) the
+   * measurements. `later`: only start it; its mask is read by collectPending next frame.
+   */
+  private analyse(steady: boolean, measure: boolean, later = false) {
     const source = this.source;
     const segmenter = this.segmenter;
     if (!source || !segmenter) return;
@@ -1071,6 +1190,14 @@ export class HairTryOnEngine {
     // MediaPipe needs timestamps that always increase
     const timestamp = Math.max(performance.now(), this.lastTimestamp + 1);
     this.lastTimestamp = timestamp;
+    if (later) {
+      const t = performance.now();
+      // Without a callback the masks are copied on the GPU and kept until closed, so this
+      // returns without waiting for the model to finish
+      const result = segmenter.segmentForVideo(this.roiCanvas, timestamp);
+      this.pending = { result, source, steady, measure, startMs: performance.now() - t };
+      return;
+    }
     segmenter.segmentForVideo(this.roiCanvas, timestamp, (result) => this.readMasks(result, source, steady, measure));
   }
 
