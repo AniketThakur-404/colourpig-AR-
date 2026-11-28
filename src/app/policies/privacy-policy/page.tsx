@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="17 November 2026" current="/policies/privacy-policy">
+    <LegalPage title="Privacy Policy" updated="28 November 2026" current="/policies/privacy-policy">
       <p>
         Colourpig is a brand of Norman Brown Pty Ltd (&quot;we&quot;, &quot;us&quot;). This policy explains what
         personal information we collect when you visit colourpig.com or buy from us, how we use it, and the choices
@@ -51,6 +51,38 @@ export default function PrivacyPolicyPage() {
         providers and delivery companies. They may only use it to provide their service to us. Some of these
         providers store data outside Australia, including in the United States and the European Union.
       </p>
+
+      <h2 id="virtual-try-on" className="scroll-mt-40">Virtual Try-On</h2>
+      <p>
+        Our Virtual Try-On lets you preview Colourpig shades on your own hair using your device&apos;s camera or a
+        photo you choose. Before it starts, we ask you to confirm that you are 18 or older and that you agree to the
+        processing described here.
+      </p>
+      <ul>
+        <li>
+          <strong>What it does:</strong> the try-on looks at each camera frame or your photo to work out which parts
+          are hair and which are face and skin, so it can recolour only your hair.
+        </li>
+        <li>
+          <strong>Where it happens:</strong> entirely inside your browser, on your device. Your camera feed and photos
+          are never uploaded to us or to anyone else, and we cannot see them.
+        </li>
+        <li>
+          <strong>What is kept:</strong> nothing. Each frame is discarded once it has been shown, and closing the
+          try-on stops the camera. We do not create, store or share a face template or any other biometric record,
+          and we never use the try-on to identify you. Pictures you save with the try-on are saved only to your own
+          device.
+        </li>
+        <li>
+          <strong>Your consent:</strong> we remember in your browser that you agreed, so you are not asked every
+          time. You can withdraw it at any time by clearing this site&apos;s data in your browser settings, and you can
+          block camera access for this site whenever you like.
+        </li>
+        <li>
+          <strong>A simulation only:</strong> the preview is a guide. Your real result depends on your natural colour,
+          how much grey you have and any previous colouring.
+        </li>
+      </ul>
 
       <h2>Cookies</h2>
       <p>

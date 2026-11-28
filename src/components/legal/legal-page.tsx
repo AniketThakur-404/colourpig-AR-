@@ -6,9 +6,9 @@ import { WishlistDrawer } from "@/components/wishlist/wishlist-drawer";
 import { HamburgerMenu } from "@/components/navigation/hamburger-menu";
 import { EcommFooter } from "@/components/home/ecomm-footer";
 import { StoreProvider } from "@/context/store-context";
-import { LEGAL_PAGES, LegalPageHref } from "@/data/legal";
+import { CONTACT_EMAIL, LEGAL_PAGES, LegalPageHref } from "@/data/legal";
 
-export const CONTACT_EMAIL = "hello@colourpig.com";
+export { CONTACT_EMAIL };
 
 /**
  * Shell for the policy pages: site navigation, a plain reading column, and the

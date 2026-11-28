@@ -6,3 +6,6 @@ export const LEGAL_PAGES = [
 ] as const;
 
 export type LegalPageHref = (typeof LEGAL_PAGES)[number]["href"];
+
+/** Where privacy and policy questions go. */
+export const CONTACT_EMAIL = "hello@colourpig.com";
