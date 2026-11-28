@@ -7,10 +7,13 @@ import {
   ArrowLeftRight,
   Camera,
   CameraOff,
+  ChevronLeft,
+  ChevronRight,
   ChevronsLeftRight,
   Download,
   ImageUp,
   Lightbulb,
+  Sun,
   LoaderCircle,
   ScanFace,
   Share2,
@@ -122,9 +125,15 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
   // otherwise what to start once they agree
   const [asking, setAsking] = useState<Source | "open" | null>(() => (hasTryOnConsent() ? null : "open"));
   const [lightTip, setLightTip] = useState(false);
+  // Screen light: the screen glows white around the picture to light the shopper's face in a
+  // dark room, so the camera sees their hair. It only changes the screen, never the try-on itself.
+  const [screenLight, setScreenLight] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const shadeRowRef = useRef<HTMLDivElement>(null);
+  // Which ends of the shade row have more shades hidden past them
+  const [more, setMore] = useState({ left: false, right: false });
   const hostRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -295,6 +304,28 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
     }
   };
 
+  const checkShadeRow = useCallback(() => {
+    const row = shadeRowRef.current;
+    if (!row) return;
+    const left = row.scrollLeft > 4;
+    const right = row.scrollLeft + row.clientWidth < row.scrollWidth - 4;
+    setMore((now) => (now.left === left && now.right === right ? now : { left, right }));
+  }, []);
+
+  // The observer reports straight away, then again whenever the row changes size
+  useEffect(() => {
+    const row = shadeRowRef.current;
+    if (!row) return;
+    const observer = new ResizeObserver(checkShadeRow);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [tab, shades.length, checkShadeRow]);
+
+  const slideShades = (direction: 1 | -1) => {
+    const row = shadeRowRef.current;
+    row?.scrollBy({ left: direction * row.clientWidth * 0.7, behavior: "smooth" });
+  };
+
   /** Camera or photo, but only once they've agreed to the try-on consent */
   const begin = (source: Source) => {
     if (!hasTryOnConsent()) {
@@ -378,15 +409,19 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
     }
   };
 
-  const hint = !live
+  const glowing = screenLight && view === "camera";
+
+  const hint: { icon: typeof Sun; text: string; offerLight?: boolean } | null = !live
     ? null
     : !info.hairVisible
       ? { icon: ScanFace, text: "We can't see your hair. Move back so all of it is in view." }
-      : info.lowLight
-        ? { icon: Lightbulb, text: "It's a little dark. Face a window or a soft light for a truer colour." }
-        : lightTip
-          ? { icon: Lightbulb, text: "For the truest colour, face a window or a soft, even light." }
-          : null;
+      : info.lowLight && view === "camera" && !glowing
+        ? { icon: Lightbulb, text: "It's too dark to see your shade clearly.", offerLight: true }
+        : info.lowLight && !glowing
+          ? { icon: Lightbulb, text: "It's a little dark. A brighter photo will show the shade better." }
+          : lightTip
+            ? { icon: Lightbulb, text: "For the truest colour, face a window or a soft, even light." }
+            : null;
 
   const issue = PROBLEMS[problem];
 
@@ -403,7 +438,11 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
       onKeyDown={trapFocus}
       className="fixed inset-0 z-[95] flex items-stretch justify-center outline-none"
     >
-      <div className="absolute inset-0 bg-obsidian/85 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div
+        className={`absolute inset-0 transition-colors duration-300 ${glowing ? "bg-white" : "bg-obsidian/85 backdrop-blur-sm"}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
       {/* A tall, phone-shaped frame: the picture on top, a sheet of shades underneath */}
       <div className="relative z-10 flex flex-col w-full sm:max-w-[420px] h-[100dvh] bg-white text-obsidian overflow-hidden shadow-2xl">
@@ -416,6 +455,13 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
               ref={hostRef}
               className={`absolute inset-0 transition-opacity duration-300 ${live ? "opacity-100" : "opacity-0"}`}
             />
+            {glowing && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 z-[5] pointer-events-none"
+                style={{ boxShadow: "inset 0 0 0 16px #fff, inset 0 0 80px 36px rgba(255,255,255,0.85)" }}
+              />
+            )}
             <input ref={fileRef} type="file" accept="image/*" onChange={openPhoto} className="hidden" tabIndex={-1} />
 
             {view === "intro" && (
@@ -512,7 +558,7 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                       <button
                         type="button"
                         onClick={() => (view === "camera" ? fileRef.current?.click() : startCamera())}
-                        className="-ml-3 sm:-ml-4 h-10 pl-3 pr-4 rounded-r-full bg-white/95 hover:bg-white text-obsidian shadow-md text-[12px] font-semibold flex items-center gap-2 cursor-pointer"
+                        className="-ml-3 sm:-ml-4 h-10 pl-3 pr-4 rounded-r-full bg-white/95 hover:bg-white text-obsidian shadow-md font-mono text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer"
                       >
                         <ArrowLeftRight className="w-4 h-4" />
                         {view === "camera" ? "Photo" : "Camera"}
@@ -527,6 +573,18 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                 )}
               </div>
               <div className="flex items-center gap-2 pointer-events-auto">
+                {view === "camera" && (
+                  <button
+                    type="button"
+                    onClick={() => setScreenLight((on) => !on)}
+                    aria-pressed={screenLight}
+                    aria-label="Screen light"
+                    title={screenLight ? "Turn off screen light" : "Screen light: brighten your face in a dark room"}
+                    className={`${ROUND_BUTTON} ${screenLight ? "!bg-pantone-yellow" : ""}`}
+                  >
+                    <Sun className="w-[18px] h-[18px]" />
+                  </button>
+                )}
                 {view === "camera" && canFlip && (
                   <button
                     type="button"
@@ -570,13 +628,22 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
               <>
                 {hint && (
                   <div className="absolute inset-x-0 top-[40%] z-10 flex justify-center px-6 pointer-events-none">
-                    <p
-                      role="status"
-                      className="max-w-[320px] px-4 py-3 rounded-2xl bg-obsidian/75 backdrop-blur-md text-white text-[12px] leading-snug font-medium flex items-center gap-2.5"
-                    >
-                      <hint.icon className="w-5 h-5 shrink-0 text-pantone-yellow" strokeWidth={1.5} />
-                      {hint.text}
-                    </p>
+                    <div className="max-w-[320px] px-4 py-3 rounded-2xl bg-obsidian/75 backdrop-blur-md text-white text-[12px] leading-snug font-medium">
+                      <p role="status" className="flex items-center gap-2.5">
+                        <hint.icon className="w-5 h-5 shrink-0 text-pantone-yellow" strokeWidth={1.5} />
+                        {hint.text}
+                      </p>
+                      {hint.offerLight && (
+                        <button
+                          type="button"
+                          onClick={() => setScreenLight(true)}
+                          className="pointer-events-auto mt-2.5 w-full h-9 rounded-full bg-white hover:bg-platinum text-obsidian font-mono text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <Sun className="w-3.5 h-3.5" />
+                          Turn on screen light
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -655,51 +722,73 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
             </h2>
 
             {tab === "shades" ? (
-              <div
-                role="radiogroup"
-                aria-label="Shade"
-                className="flex gap-2 px-3 pt-2.5 pb-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                {shades.map((option) => {
-                  const active = option.id === shade.id;
-                  return (
+              <div className="relative">
+                <div
+                  ref={shadeRowRef}
+                  role="radiogroup"
+                  aria-label="Shade"
+                  onScroll={checkShadeRow}
+                  className="flex gap-2 px-3 pt-2.5 pb-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {shades.map((option) => {
+                    const active = option.id === shade.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        aria-label={option.name}
+                        title={option.name}
+                        onClick={() => setShadeId(option.id)}
+                        className="shrink-0 w-[64px] pt-1 flex flex-col items-center gap-1.5 cursor-pointer group"
+                      >
+                        <span
+                          className={`relative block w-11 h-11 rounded-full transition-all ${
+                            active ? "ring-2 ring-obsidian ring-offset-2" : "ring-1 ring-black/10 group-hover:-translate-y-0.5"
+                          }`}
+                          style={{ backgroundColor: option.hex }}
+                        >
+                          {/* In the swatch photos the hair circle is about 56% of the width, centred 40% down,
+                              with the shade name printed below. The image is laid out 174% wide with its circle
+                              centred in the tile; plain sizing, not a CSS transform, because iOS Safari doesn't
+                              clip transformed images to a round frame */}
+                          <span className="absolute inset-0 rounded-full overflow-hidden isolate [-webkit-mask-image:-webkit-radial-gradient(white,black)]">
+                            <span className="absolute" style={{ width: "174%", height: "174%", left: "-37.9%", top: "-20.5%" }}>
+                              <Image src={option.swatchImage} alt="" fill sizes="88px" className="object-cover" />
+                            </span>
+                          </span>
+                        </span>
+                        <span
+                          className={`w-full line-clamp-2 text-center font-mono text-[9px] leading-tight ${
+                            active ? "font-bold text-obsidian" : "font-medium text-steel"
+                          }`}
+                        >
+                          {option.code} {shortName(option.name)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Faded edges with an arrow, only where more shades are hidden */}
+                {(["left", "right"] as const).map((side) => (
+                  <div
+                    key={side}
+                    className={`absolute inset-y-0 ${side === "left" ? "left-0 bg-gradient-to-r" : "right-0 bg-gradient-to-l"} w-12 from-white via-white/80 to-transparent flex items-center ${
+                      side === "left" ? "justify-start pl-1" : "justify-end pr-1"
+                    } transition-opacity duration-200 ${more[side] ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+                  >
                     <button
-                      key={option.id}
                       type="button"
-                      role="radio"
-                      aria-checked={active}
-                      aria-label={option.name}
-                      title={option.name}
-                      onClick={() => setShadeId(option.id)}
-                      className="shrink-0 w-[54px] pt-1 flex flex-col items-center gap-1.5 cursor-pointer group"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      onClick={() => slideShades(side === "left" ? -1 : 1)}
+                      className="-mt-5 w-7 h-7 rounded-full bg-white/90 text-obsidian shadow-md flex items-center justify-center cursor-pointer hover:bg-white"
                     >
-                      <span
-                        className={`relative w-11 h-11 rounded-full overflow-hidden transition-all ${
-                          active ? "ring-2 ring-obsidian ring-offset-2" : "ring-1 ring-black/10 group-hover:-translate-y-0.5"
-                        }`}
-                        style={{ backgroundColor: option.hex }}
-                      >
-                        {/* In the swatch photos the hair circle is about 56% of the width, centred 40% down,
-                            with the shade name printed below: zoom to the circle, rim included */}
-                        <Image
-                          src={option.swatchImage}
-                          alt=""
-                          fill
-                          sizes="88px"
-                          className="object-cover"
-                          style={{ transform: "scale(1.74) translate(-0.5%, 9.5%)" }}
-                        />
-                      </span>
-                      <span
-                        className={`w-full line-clamp-2 text-center text-[10px] leading-tight ${
-                          active ? "font-bold text-obsidian" : "text-steel"
-                        }`}
-                      >
-                        {shortName(option.name)}
-                      </span>
+                      {side === "left" ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="px-3 pt-2.5 pb-2 flex justify-center">
@@ -772,7 +861,7 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                     aria-selected={tab === name}
                     disabled={name === "compare" && !live}
                     onClick={() => openTab(name)}
-                    className={`relative h-8 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:cursor-not-allowed disabled:text-ash ${
+                    className={`relative h-8 rounded-md font-mono text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:cursor-not-allowed disabled:text-ash ${
                       tab === name ? "text-white" : "text-obsidian"
                     }`}
                   >

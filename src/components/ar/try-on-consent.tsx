@@ -116,7 +116,7 @@ export function TryOnConsent({ onAgree, onCancel }: TryOnConsentProps) {
           type="button"
           onClick={agree}
           disabled={!ready}
-          className="mt-5 w-full h-11 rounded-lg bg-obsidian hover:bg-black text-white text-[13px] font-bold transition-colors cursor-pointer disabled:bg-[#9A9A9A] disabled:cursor-not-allowed"
+          className="mt-5 w-full h-11 rounded-lg bg-obsidian hover:bg-black text-white font-mono text-[12px] font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:bg-[#9A9A9A] disabled:cursor-not-allowed"
         >
           I consent
         </button>
