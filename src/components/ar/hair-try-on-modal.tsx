@@ -26,6 +26,7 @@ import {
 import Image from "@/components/ui/image";
 import { SnoutIcon } from "@/components/brand/logo";
 import { findShade } from "@/data/catalog";
+import { swatchThumbnail } from "@/data/shades";
 import { canTryOnShade } from "./hair-try-on";
 import { TryOnConsent, hasTryOnConsent } from "./try-on-consent";
 import { useCatalog } from "@/context/catalog-context";
@@ -749,14 +750,10 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                           }`}
                           style={{ backgroundColor: option.hex }}
                         >
-                          {/* In the swatch photos the hair circle is about 56% of the width, centred 40% down,
-                              with the shade name printed below. The image is laid out 174% wide with its circle
-                              centred in the tile; plain sizing, not a CSS transform, because iOS Safari doesn't
-                              clip transformed images to a round frame */}
+                          {/* The bundled clean swatch circle (as the site's round swatches use): it fills its
+                              frame edge to edge, so it fits the tile exactly with no zoom or offset to go wrong */}
                           <span className="absolute inset-0 rounded-full overflow-hidden isolate [-webkit-mask-image:-webkit-radial-gradient(white,black)]">
-                            <span className="absolute" style={{ width: "174%", height: "174%", left: "-37.9%", top: "-20.5%" }}>
-                              <Image src={option.swatchImage} alt="" fill sizes="88px" className="object-cover" />
-                            </span>
+                            <Image src={swatchThumbnail(option)} alt="" fill sizes="88px" className="object-cover" />
                           </span>
                         </span>
                         <span
@@ -774,7 +771,7 @@ export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps)
                 {(["left", "right"] as const).map((side) => (
                   <div
                     key={side}
-                    className={`absolute inset-y-0 ${side === "left" ? "left-0 bg-gradient-to-r" : "right-0 bg-gradient-to-l"} w-12 from-white via-white/80 to-transparent flex items-center ${
+                    className={`absolute inset-y-0 ${side === "left" ? "left-0 bg-gradient-to-r" : "right-0 bg-gradient-to-l"} w-12 from-white via-white/80 to-white/0 flex items-center ${
                       side === "left" ? "justify-start pl-1" : "justify-end pr-1"
                     } transition-opacity duration-200 ${more[side] ? "opacity-100" : "opacity-0 pointer-events-none"}`}
                   >
