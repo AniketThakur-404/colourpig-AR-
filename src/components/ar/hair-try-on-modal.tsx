@@ -102,7 +102,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabi
 export function HairTryOnModal({ initialShadeId, onClose }: HairTryOnModalProps) {
   const store = useStore();
   const { shades: allShades } = useCatalog();
-  // No.7, No.8 and No.9 are left out of the try-on (see canTryOnShade)
+  // Shades can be left out of the try-on (see canTryOnShade)
   const shades = allShades.filter((s) => canTryOnShade(s.id));
 
   const [shadeId, setShadeId] = useState(initialShadeId);

@@ -614,6 +614,7 @@ export class HairTryOnEngine {
       "uTargetLCh",
       "uLift",
       "uChromaFloor",
+      "uLighten",
       "uMix",
       "uFeather",
       "uTexel",
@@ -1994,6 +1995,7 @@ export class HairTryOnEngine {
     gl.uniform3f(uniforms.uTargetLCh, swatch.L, swatch.C, swatch.h);
     gl.uniform1f(uniforms.uLift, tuning.lift);
     gl.uniform1f(uniforms.uChromaFloor, tuning.chromaFloor);
+    gl.uniform1f(uniforms.uLighten, profile?.kind === "colour" ? (profile.lighten ?? 0) : 0);
     gl.uniform1f(uniforms.uMix, tuning.strength);
     gl.uniform1f(uniforms.uFeather, tuning.feather);
     gl.uniform2f(uniforms.uTexel, 1 / source.width, 1 / source.height);

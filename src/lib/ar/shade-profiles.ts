@@ -31,7 +31,19 @@ export interface HairShadeProfile {
   natural?: boolean;
   /** The swatch's mean colour in OKLab: lightness, chroma and hue (radians) */
   swatch?: OkLch;
+  /**
+   * Light shades only (No.7 and lighter): 1 = the dye blend lightens each strand in
+   * proportion to its own lightness instead of by one fixed amount (see `natural` in
+   * hair-shaders.ts). Unset for darker shades, whose blend is unchanged.
+   */
+  lighten?: number;
 }
+
+/** Swatch lightness (OKLab L) from which a shade counts as light: No.7 is 0.68, No.6 0.47 */
+const LIGHT_SWATCH_L = 0.6;
+
+/** The `lighten` setting for a dye shade with this swatch colour */
+const lightenFor = (swatch: OkLch) => (swatch.L >= LIGHT_SWATCH_L ? 0.6 : undefined);
 
 /**
  * Each shade's swatch photo (public/images/products/swatches/clean) measured in OKLab:
@@ -240,7 +252,9 @@ export function getHairShadeProfile(shade: ProfiledShade): HairShadeProfile {
   // Clear's silver replaces the hair's tones; every dye shade keeps the wearer's own
   const natural = shade.id !== "shade-0-0";
   const swatch = SWATCH_OKLAB[shade.id] ?? oklchOf(hexToRgb(shade.hex) ?? stops[MID_STOP]);
-  const profile: HairShadeProfile = natural ? { kind: "colour", stops, natural, swatch } : { kind: "colour", stops };
+  const profile: HairShadeProfile = natural
+    ? { kind: "colour", stops, natural, swatch, lighten: lightenFor(swatch) }
+    : { kind: "colour", stops };
   profileCache.set(cacheKey(shade), profile);
   return profile;
 }
@@ -261,15 +275,18 @@ export function loadSwatchProfile(shade: ProfiledShade): Promise<HairShadeProfil
   if (!pending) {
     pending = readSwatchTones(swatchThumbnail(shade)).then((tones) => {
       if (!tones) return null;
+      const swatch = oklchOf(tones[MID_STOP]);
+      const stops = spreadTones(
+        luma(tones[MID_STOP]) * SWATCH_TO_WORN,
+        (i) => tones[i],
+        () => SWATCH_SATURATION
+      );
       const profile: HairShadeProfile = {
         kind: "colour",
         natural: true,
-        swatch: oklchOf(tones[MID_STOP]),
-        stops: spreadTones(
-          luma(tones[MID_STOP]) * SWATCH_TO_WORN,
-          (i) => tones[i],
-          () => SWATCH_SATURATION
-        ),
+        swatch,
+        lighten: lightenFor(swatch),
+        stops,
       };
       profileCache.set(key, profile);
       return profile;

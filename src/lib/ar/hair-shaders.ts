@@ -339,6 +339,7 @@ uniform float uHairMeanL;  // mean OKLab L of the wearer's hair (alpha-weighted,
 uniform vec3 uTargetLCh;   // the swatch's mean OKLab lightness, chroma and hue (radians)
 uniform float uLift;       // how far the hair's mean lightness moves toward the swatch's
 uniform float uChromaFloor;// least share of the swatch's chroma, for the darkest strands
+uniform float uLighten;    // light shades (No.7+): 1 = lighten in proportion (see natural())
 uniform float uMix;        // how much of the recoloured hair replaces the original
 uniform float uFeather;    // soft outer edge, in frame pixels
 uniform vec2 uTexel;       // one frame pixel, in uv
@@ -402,9 +403,19 @@ float coverAt(vec2 uv) {
  *    than the swatch has.
  *  - The result replaces uMix of the original.
  */
+/*
+ * Light shades (uLighten = 1, No.7 and lighter) are far lighter than the hair they go on.
+ * Adding one large step of lightness to every strand lifts deep shadows almost as high as
+ * highlights: the hair flattens into one even sheet (milky grey, or orange once tinted),
+ * worst on dark hair in dim light. For them each strand is lightened in proportion to its
+ * own lightness instead. The hair's mean lands in the same place, but shadows stay deep
+ * and highlights lift more, so the strand texture survives, as it does on real
+ * lightened hair. Darker shades take only small steps, where the two agree closely.
+ */
 vec3 natural(vec3 source) {
   float L0 = toOklab(source).x;
-  float L1 = mix(uHairMeanL, uTargetLCh.x, uLift) + (L0 - uHairMeanL);
+  float mean1 = mix(uHairMeanL, uTargetLCh.x, uLift);
+  float L1 = mix(mean1 + (L0 - uHairMeanL), L0 * mean1 / max(uHairMeanL, 1e-3), uLighten);
   float C1 = uTargetLCh.y * clamp(L1 / max(uTargetLCh.x, 1e-3), uChromaFloor, 1.0);
   vec3 recoloured = fromOklab(vec3(L1, C1 * cos(uTargetLCh.z), C1 * sin(uTargetLCh.z)));
   return mix(source, recoloured, uMix);
